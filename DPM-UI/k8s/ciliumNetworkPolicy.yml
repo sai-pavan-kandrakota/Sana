@@ -1,0 +1,18 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: dpmui-ingress
+  namespace: dpmservice
+spec:
+  description: "Policy for allowing ingress from ingress-nginx"
+  endpointSelector:
+    matchLabels:
+      application-name: dpmui
+  ingress:
+  - fromEndpoints:
+     - matchLabels:
+         k8s:io.kubernetes.metadata.name: dpmui
+    toPorts:
+    - ports:
+      - port: '443'
+        protocol: TCP
