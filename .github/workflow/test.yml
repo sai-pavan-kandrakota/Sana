@@ -1,0 +1,126 @@
+name: AKS Deployment
+on:
+  push:
+  # workflow_dispatch:
+    # branches:
+    #   - feature/workingsana
+permissions:
+  id-token: write
+  contents: read
+env:
+  AZURE_CONTAINER_REGISTRY: acrnadpmaksdev01ccba.azurecr.io
+  ACR_USERNAME: acrnadpmaksdev01ccba
+  ACR_PASSWORD: xSYqw+ICSl7NnCVmA81muzX5OZFGbNxMRwPSqxw/Fu+ACRDwElhL
+  RESOURCE_GROUP: AZ-RG-AZ-RG-DPM-K8S-Dev
+  CLUSTER_NAME: na-dpm-aks-dev-01-ccba
+  REPO_PATH: ${{ github.workspace }}
+  DEPLOYMENT_FILE: ../../DPMService/k8s/deployment.yml
+  SERVICE_FILE: ../../DPMService/k8s/service.yml
+  KEYVAULT_NAME: kvnadpmaksdev01ccba
+  AZURE_LOG_LEVEL: debug
+jobs:
+  build:
+    runs-on: [self-hosted,Linux, cicdframework]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Set up Java
+      uses: actions/setup-java@v2
+      with:
+        distribution: 'temurin' 
+        java-version: '21'
+    - name: Build with Maven
+      run: mvn clean install -DskipTests
+      working-directory: DPMService
+    # - name: Azure login
+    #   uses: azure/login@v2
+    #   with:
+    #     # auth-type: IDENTITY
+    #     client-id: 65964909-02ad-41ef-ae3a-e9730500a97d
+    #     tenant-id: 3596192b-fdf5-4e2c-a6fa-acb706c963d8
+    #     # allow-no-subscriptions: true
+    #     subscription-id: fc435c31-c49e-4436-a0f6-7ee47d799fa9
+    #     enable-AzPSSession: true
+    # - name: Azure CLI script
+    #   uses: azure/cli@v2
+    #   with:
+    #       azcliversion: latest
+    #       inlineScript: |
+    #         az account show
+    - name: Login to Azure Container Registry
+      uses: azure/docker-login@v1
+      with:
+        login-server: acrnadpmaksdev01ccba.azurecr.io
+        username: acrnadpmaksdev01ccba
+        password: xSYqw+ICSl7NnCVmA81muzX5OZFGbNxMRwPSqxw/Fu+ACRDwElhL
+    - name: Build and push Docker image
+      run: |
+         hostname -I
+         BUILD_DIR="DPMService"
+         DOCKERFILE="Dockerfile"
+          docker build -t acrnadpmaksdev01ccba.azurecr.io/dpmservice:v1 -f $BUILD_DIR/$DOCKERFILE $BUILD_DIR
+          docker push  acrnadpmaksdev01ccba.azurecr.io/dpmservice:v1
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v1
+      with:
+        version: 'latest'
+    - name: Setup kubelogin
+      uses: azure/use-kubelogin@v1
+      with:
+          kubelogin-version: 'v0.0.26'
+    - name: Azure login
+      uses: azure/login@v2
+      with:
+        # auth-type: IDENTITY
+        client-id: 65964909-02ad-41ef-ae3a-e9730500a97d
+        tenant-id: 3596192b-fdf5-4e2c-a6fa-acb706c963d8
+        # allow-no-subscriptions: true
+        subscription-id: fc435c31-c49e-4436-a0f6-7ee47d799fa9
+        enable-AzPSSession: true
+    - name: Azure CLI script
+      uses: azure/cli@v2
+      with:
+          azcliversion: latest
+          inlineScript: |
+            az account show
+    - name: Set AKS context
+      id: set-context
+      uses: azure/aks-set-context@v3
+      with:
+          resource-group: 'AZ-RG-AZ-RG-DPM-K8S-Dev'
+          cluster-name: 'na-dpm-aks-dev-01-ccba'
+          admin: 'false'
+          use-kubelogin: 'true'
+    - name: Create and apply pod-reader Role
+      run: |
+          # cat <<EOF | kubectl apply -f -
+          # apiVersion: rbac.authorization.k8s.io/v1
+          # kind: Role
+          # metadata:
+          #   namespace: dpmservice
+          #   name: dpmservice
+          # rules:
+          # - apiGroups: [""] 
+          #   resources: ["*"]
+          #   verbs: [ "*"]
+          # EOF
+          # apiVersion: rbac.authorization.k8s.io/v1
+          # kind: RoleBinding
+          # metadata: 
+          #  name: dpmservice
+          #  namespace: dpmservice
+          # roleRef:
+          #  apiGroup: rbac.authorization.k8s.io
+          #  kind: Role
+          #  name: dpmservice
+          # subjects: 
+          # - kind: User
+          #   namespace: dpmservice
+          #   name: 48b78c29-dae2-47f0-a40d-a3323bcb6150
+    - name: Deploy to AKS
+      run:  |
+          kubectl apply -f $REPO_PATH/DPMService/k8s/configmap.yml --validate=false
+          kubectl apply -f $REPO_PATH/DPMService/k8s/deployment.yml --validate=false
+          kubectl apply -f $REPO_PATH/DPMService/k8s/service.yml --validate=false
+          kubectl apply -f $REPO_PATH/DPMService/k8s/ingress.yml --validate=false
+          kubectl apply -f $REPO_PATH/DPMService/k8s/ciliumNetworkPolicy.yml --validate=false
