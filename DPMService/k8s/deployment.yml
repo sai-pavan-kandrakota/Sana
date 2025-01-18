@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dpmservice
+  namespace: dpmservice
+  labels:
+    app: dpmservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dpmservice
+  template:
+    metadata:
+      labels:
+        app: dpmservice
+    spec:
+      volumes:
+        - name: dpmservice-secret
+          secret:
+            secretName: dpmservice-secret
+        - name: dpmservice-config
+          configMap:
+            name: dpmservice-configmap
+      containers:
+      - name: acrnadpmaksdev01ccba
+        image: acrnadpmaksdev01ccba.azurecr.io/dpmservice:v1
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+          - mountPath: /etc/nginx/tls/
+            name: dpmservice-secret
+            readOnly: true
+          - name: dpmservice-config
+            mountPath: /etc/nginx/nginx.conf
+            subPath: nginx.conf            
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          limits:
+            memory: "1Gi"
+            cpu: "1"
