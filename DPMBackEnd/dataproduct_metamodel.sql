@@ -1,0 +1,20 @@
+CREATE TABLE dataproduct_metamodel (
+  id int NOT NULL ,
+  title varchar(100) NOT NULL,
+  dataProductDescription varchar(500) DEFAULT NULL,
+  dataProductOverview varchar(9157) DEFAULT NULL,
+  dataPublisher varchar(50) DEFAULT NULL,
+  steward varchar(50) DEFAULT NULL,
+  dataAssetManager varchar(50) DEFAULT NULL,
+  securityClassification varchar(100) DEFAULT NULL,
+  statusDecision varchar(30) DEFAULT NULL,
+  dataLayer varchar(50) DEFAULT NULL,
+  howToApply varchar(50) DEFAULT NULL,
+  dataAccessInformation varchar(50) DEFAULT NULL,
+  businessUnit varchar(500) DEFAULT NULL,
+  objectSecurity varchar(500) DEFAULT NULL,
+  dataSource varchar(50) DEFAULT NULL,
+  personalDataIndicator varchar(500) DEFAULT NULL,
+  dataDomain int DEFAULT NULL,
+  PRIMARY KEY (id)
+  )
